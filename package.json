@@ -7,11 +7,11 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "mocha tests",
+    "test": "npm run lint && npm run coverage",
     "start": "node index.js",
     "lint": "eslint \"./**/*.js\"",
     "dev": "nodemon --exec node index.js",
-    "coverage": "nyc npm run test"
+    "coverage": "nyc mocha tests"
   },
   "pre-push": {
     "run": [
