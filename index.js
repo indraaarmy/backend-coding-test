@@ -12,15 +12,19 @@ db.serialize(() => {
 
   const app = require('./src/app')(db);
 
-  app.use((err,req,res) => {
-    res.status(500).send({
-      "message": "Could not perform the calculation!"
-    });
+  app.use((err, req, res, next) => {
+    if (err) {
+      res.status(500).send({
+        "message": "Could not perform the calculation!"
+      });
 
-    logger.error(`${err.status || 500} - ${res.statusMessage} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+      logger.error(`${err.status || 500} - ${res.statusMessage} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+    } else {
+      next();
+    }
   })
 
-  app.use((req,res) => {
+  app.use((req, res) => {
     res.status(404).json({
       "message": "Not Found"
     });
