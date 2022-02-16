@@ -1,0 +1,37 @@
+config:
+  target: "http://localhost:8010"
+  phases:
+    - duration: 30
+      arrivalRate: 100
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+  ensure:
+    p99: 50
+
+scenarios:
+  - name: "Xendit BE Test Load"
+    flow:
+      - get:
+          name: "GET /health"
+          url: "/health"
+      - post:
+          name: "POST /rides"
+          url: "/rides"
+          json:
+            start_lat: 10
+            start_long: 10
+            end_lat: 50
+            end_long: 50
+            rider_name: "Test Rider"
+            driver_name: "Test Driver"
+            driver_vehicle: "Car"
+      - get:
+          name: "GET /rides"
+          url: "/rides"
+      - get:
+          name: "GET /rides with page, limit"
+          url: "/rides?page=1&limit=10"
+      - get:
+          name: "GET /rides with ride id"
+          url: "/rides/1"
