@@ -194,4 +194,38 @@ describe('API tests', () => {
         }, done);
     });
   });
+
+  describe('GET /rides with pagination', () => {
+    before((done) => {
+      for (let i = 0; i < 20; i++) {
+        db.run(`INSERT INTO Rides (startLat, startLong, endLat, endLong, riderName, driverName, driverVehicle)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`, [30, 30, 100, 100, `Test Rider ${i}`, `Test Driver ${i}`, "Car", ] );
+      }
+      done();
+    });
+
+    it('should return default 10 rows', (done) => {
+      request(app)
+        .get('/rides?page=1')
+        .expect('Content-Type', /json/)
+        .expect(200)
+        .end(function(err, res) {
+          if (err) return done(err);
+          assert.equal(res.body.length, 10);
+          done();
+        });
+    });
+
+    it('should return with limit 5 rows', (done) => {
+      request(app)
+        .get('/rides?page=1&limit=5')
+        .expect('Content-Type', /json/)
+        .expect(200)
+        .end(function(err, res) {
+          if (err) return done(err);
+          assert.equal(res.body.length, 5);
+          done();
+        });
+    });
+  });
 });
