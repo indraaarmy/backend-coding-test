@@ -160,6 +160,21 @@ describe('API tests', () => {
           message: 'Driver vehicle must be a non empty string',
         }, done);
     });
+
+    it('should return server error', (done) => {
+      request(app)
+        .post('/rides')
+        .send({
+          rider_name: 'Test Rider',
+          driver_name: 'Test Driver',
+          driver_vehicle: 'Car',
+        })
+        .expect('Content-Type', /json/)
+        .expect(200, {
+          error_code: 'SERVER_ERROR',
+          message: 'Unknown error',
+        }, done);
+    });
   });
 
   describe('GET /rides', () => {
@@ -224,6 +239,102 @@ describe('API tests', () => {
         .end(function(err, res) {
           if (err) return done(err);
           assert.equal(res.body.length, 5);
+          done();
+        });
+    });
+  });
+
+  describe('Async DB Test', () => {
+    const dbAsync = require('../src/utils/db-async');
+    const { all: dbAll, run: dbRun } = dbAsync(db);
+
+    it("should throw server error on all function", async () => {
+      try {
+        await dbAll(`SELECT no_field FROM Rides`);
+      } catch (error) {
+        assert.deepEqual(error, {
+          error_code: "SERVER_ERROR",
+          message: "Unknown error",
+        });
+      }
+    });
+
+    it("should throw server error on run function", async () => {
+      try {
+        await dbRun(`INSERT INTO Rides (start_lat) VALUES (?)`, [10]);
+      } catch (error) {
+        assert.deepEqual(error, {
+          error_code: "SERVER_ERROR",
+          message: "Unknown error",
+        });
+      }
+    });
+
+    it("should return all Rides data", async () => {
+      const rows = await dbAll("SELECT * FROM Rides");
+      assert.equal(rows.length, 21);
+    });
+  });
+
+  describe('SQL Injection Test', () => {
+    it('should prevent SQL Injection endpoint GET /rides', (done) => {
+      request(app)
+        .get('/rides?page=1&limit=1; DELETE FROM Rides WHERE rideID = 1;')
+        .expect('Content-Type', /json/)
+        .expect(200)
+        .end(function(err) {
+          if (err) return done(err);
+          request(app)
+            .get('/rides?limit=100')
+            .expect('Content-Type', /json/)
+            .expect(200)
+            .end(function(err, res) {
+              if (err) return done(err);
+              assert.equal(res.body.length, 21);
+              done();
+            });
+        });
+    });
+
+    it('should prevent SQL Injection endpoint POST /rides', (done) => {
+      request(app)
+        .post('/rides')
+        .send({
+          start_lat: 10,
+          start_long: 10,
+          end_lat: 50,
+          end_long: 50,
+          rider_name: 'Test Rider',
+          driver_name: 'Test Driver',
+          driver_vehicle: 'Car; DELETE FROM Rides WHERE rideID = 1',
+        })
+        .expect('Content-Type', /json/)
+        .expect(200)
+        .end(function(err) {
+          if (err) return done(err);
+          request(app)
+            .get('/rides?limit=100')
+            .expect('Content-Type', /json/)
+            .expect(200)
+            .end(function(err, res) {
+              if (err) return done(err);
+              assert.equal(res.body.length, 22);
+              done();
+            });
+        });
+    });
+
+    it('should prevent SQL Injection endpoint GET /rides/{rideID}', (done) => {
+      request(app)
+        .get('/rides/99 OR 1=1;')
+        .expect('Content-Type', /json/)
+        .expect(200)
+        .end(function(err, res) {
+          if (err) return done(err);
+          assert.deepEqual(res.body, {
+            error_code: 'RIDES_NOT_FOUND_ERROR',
+            message: 'Could not find any rides',
+          });
           done();
         });
     });
