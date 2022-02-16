@@ -18,3 +18,6 @@ jobs:
 
       - name: Test Unit
         run: npm run test
+      
+      - name: Artillery Load Test
+        run: npm run test:load
